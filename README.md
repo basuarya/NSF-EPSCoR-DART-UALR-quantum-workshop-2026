@@ -76,14 +76,6 @@ python3 -m http.server 8000
 
 Then visit `http://localhost:8000`.
 
-## Publish with GitHub Pages
-
-1. Upload the extracted folder contents to the root of a GitHub repository.
-2. Open **Settings → Pages**.
-3. Under **Build and deployment**, select **Deploy from a branch**.
-4. Select the `main` branch and `/(root)` folder.
-5. Save and open the published address after deployment completes.
-
 ## Google Drive access
 
 The original 23 Google Drive file IDs remain in place. Each recording must be shared with the same audience that can view the published page. Video content is hosted on Google Drive and subject to separate access permissions.
