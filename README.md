@@ -1,4 +1,4 @@
-# Quantum Computing Workshop — Timeline & Workshop Patterns
+# Quantum Computing and Quantum Machine Learning Workshop — Timeline & Workshop Patterns
 
 This GitHub Pages-ready package brings the two-day video journey and the earlier public aggregate analytics into one DM Sans interface.
 
