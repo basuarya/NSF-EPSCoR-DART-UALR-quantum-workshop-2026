@@ -908,10 +908,14 @@
 
     body.modal-open { overflow: hidden; }
 
-    /* Portrait phones use the full visible height. The Google Drive iframe
-       fills the flexible middle row instead of being forced into a short
-       width-derived 16:9 box. Google Drive can then letterbox its own video
-       while keeping its controls and complete canvas visible. */
+    /* Portrait playback strategy
+       --------------------------
+       Google Drive renders its own touch controls inside a cross-origin
+       iframe. Those controls cannot be resized or hidden by this page and can
+       cover much of the recording in a narrow portrait embed. Portrait mode
+       therefore opens with a clean launch panel. The focused Drive player is
+       the primary path; inline playback remains available as an explicit
+       fallback. Landscape and desktop continue to use the inline player. */
     .video-modal.is-portrait-player,
     .video-modal.is-compact-player {
       padding:
@@ -921,25 +925,28 @@
         max(8px, env(safe-area-inset-left));
     }
 
-    .video-modal.is-portrait-player {
-      place-items: stretch center;
-    }
+    .video-modal.is-portrait-player { place-items: center; }
 
     .video-modal.is-portrait-player .modal-dialog {
-      align-self: stretch;
-      grid-template-rows: auto minmax(0, 1fr) auto;
+      align-self: auto;
+      grid-template-rows: auto var(--portrait-stage-height, 300px) auto;
       width: min(620px, 100%);
-      height: 100%;
+      height: auto;
       min-height: 0;
-      max-height: none;
-      overflow: hidden;
+      max-height: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
       border-radius: 20px;
+      scrollbar-width: thin;
     }
 
     .video-modal.is-portrait-player .modal-header {
+      position: relative;
+      z-index: 3;
       align-items: flex-start;
       gap: 10px;
       padding: 12px 13px;
+      background: #061226;
     }
 
     .video-modal.is-portrait-player .modal-copy h2 {
@@ -969,21 +976,194 @@
     .video-modal.is-portrait-player .modal-frame-wrap {
       align-self: stretch;
       width: 100%;
-      height: 100%;
+      height: var(--portrait-stage-height, 300px);
       min-height: 0;
       aspect-ratio: auto;
+      overflow: hidden;
+    }
+
+    .portrait-launch {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: none;
+      place-items: center;
+      overflow: hidden;
+      padding: clamp(16px, 5vw, 26px);
+      background:
+        radial-gradient(circle at 18% 12%, rgba(64, 199, 255, 0.22), transparent 34%),
+        radial-gradient(circle at 86% 92%, rgba(246, 185, 78, 0.15), transparent 34%),
+        linear-gradient(145deg, #071a35, #030b19 72%);
+      isolation: isolate;
+    }
+
+    .portrait-launch::before,
+    .portrait-launch::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .portrait-launch::before {
+      inset: -35%;
+      opacity: 0.36;
+      background-image:
+        linear-gradient(rgba(92, 199, 255, 0.11) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(92, 199, 255, 0.11) 1px, transparent 1px);
+      background-size: 30px 30px;
+      transform: perspective(520px) rotateX(61deg) translateY(25%);
+      mask-image: linear-gradient(to top, black, transparent 78%);
+    }
+
+    .portrait-launch::after {
+      width: 185px;
+      height: 185px;
+      right: -88px;
+      top: -90px;
+      border: 1px solid rgba(108, 211, 255, 0.2);
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 24px rgba(54, 181, 255, 0.025),
+        0 0 0 52px rgba(54, 181, 255, 0.018);
+    }
+
+    .portrait-launch-card {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      justify-items: center;
+      width: min(100%, 470px);
+      text-align: center;
+    }
+
+    .portrait-launch-icon {
+      display: grid;
+      place-items: center;
+      width: 66px;
+      height: 66px;
+      margin-bottom: 13px;
+      border: 1px solid rgba(206, 241, 255, 0.5);
+      border-radius: 50%;
+      color: #04111f;
+      background: linear-gradient(145deg, #ffffff, #9ce6ff 66%, #72caff);
+      box-shadow: 0 0 0 9px rgba(255, 255, 255, 0.035), 0 0 34px rgba(54, 194, 255, 0.28);
+    }
+
+    .portrait-launch-kicker {
+      margin: 0 0 6px;
+      color: #8addff;
+      font-size: 0.66rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .portrait-launch-card h3 {
+      margin: 0;
+      color: #ffffff;
+      font-size: clamp(1.05rem, 5vw, 1.3rem);
+      line-height: 1.18;
+      letter-spacing: -0.035em;
+    }
+
+    .portrait-launch-card > p:last-of-type {
+      max-width: 410px;
+      margin: 8px 0 0;
+      color: #9fb7cc;
+      font-size: 0.78rem;
+      line-height: 1.48;
+    }
+
+    .portrait-launch-actions {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr);
+      gap: 9px;
+      width: min(100%, 390px);
+      margin-top: 16px;
+    }
+
+    .portrait-launch-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 13px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 800;
+      line-height: 1.2;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .portrait-launch-primary {
+      color: #03101e;
+      background: linear-gradient(135deg, #b6efff, #50c9ff 62%, #7cbaff);
+      box-shadow: 0 10px 25px rgba(44, 177, 255, 0.2);
+    }
+
+    .portrait-launch-secondary {
+      color: #dcefff;
+      border-color: rgba(123, 203, 255, 0.23);
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .video-modal.is-portrait-player:not(.is-inline-player) .portrait-launch {
+      display: grid;
+    }
+
+    .video-modal.is-portrait-player:not(.is-inline-player) .modal-frame-wrap iframe {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .video-modal.is-portrait-player:not(.is-inline-player) .modal-footer a {
+      display: none;
+    }
+
+    .video-modal.is-portrait-player.is-inline-player .portrait-launch {
+      display: none;
+    }
+
+    .video-modal.is-portrait-player.is-inline-player .modal-frame-wrap {
+      height: var(--portrait-stage-height, 220px);
+    }
+
+    /* The optional inline player is rendered on a wider virtual 16:9 surface
+       and scaled into the phone-width stage. Google Drive then lays out its
+       own controls against a landscape-sized viewport instead of a narrow
+       portrait iframe, reducing the oversized overlay seen on some phones. */
+    .video-modal.is-portrait-player.is-inline-player .modal-frame-wrap iframe {
+      inset: auto;
+      top: 0;
+      left: var(--drive-surface-offset-x, 0px);
+      width: var(--drive-surface-width, 768px);
+      height: var(--drive-surface-height, 432px);
+      max-width: none;
+      max-height: none;
+      transform: scale(var(--drive-surface-scale, 0.5));
+      transform-origin: top left;
+      backface-visibility: hidden;
+      will-change: transform;
     }
 
     .video-modal.is-portrait-player .modal-footer {
+      position: relative;
+      z-index: 3;
       align-items: stretch;
       flex-direction: column;
       gap: 9px;
       padding: 11px 13px 13px;
+      background: #061226;
       font-size: 0.73rem;
       line-height: 1.45;
     }
 
-    .video-modal.is-portrait-player .modal-footer a {
+    .video-modal.is-portrait-player .modal-footer a,
+    .portrait-inline-reset {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -991,9 +1171,24 @@
       padding: 0 12px;
       border: 1px solid rgba(123, 203, 255, 0.24);
       border-radius: 11px;
+      color: var(--cyan-soft);
       background: rgba(72, 191, 255, 0.08);
+      font-size: 0.76rem;
+      font-weight: 800;
+      text-decoration: none;
       white-space: normal;
       text-align: center;
+      touch-action: manipulation;
+    }
+
+    .portrait-inline-reset {
+      display: none;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    .video-modal.is-portrait-player.is-inline-player .portrait-inline-reset {
+      display: inline-flex;
     }
 
     .video-modal.is-compact-player .modal-dialog {
@@ -1049,11 +1244,12 @@
     .video-modal.is-short-player .modal-header { padding-block: 8px; }
 
     .video-modal.is-short-player .modal-footer {
-      gap: 0;
+      gap: 7px;
       padding-block: 8px;
     }
 
-    .video-modal.is-short-player .modal-footer a { min-height: 36px; }
+    .video-modal.is-short-player .modal-footer a,
+    .video-modal.is-short-player .portrait-inline-reset { min-height: 36px; }
 
     @media (max-width: 430px) and (orientation: portrait) {
       .video-modal.is-portrait-player .modal-header { padding: 10px 11px; }
@@ -1064,6 +1260,11 @@
         flex-basis: 36px;
       }
       .video-modal.is-portrait-player .modal-footer { padding: 9px 11px 11px; }
+      .portrait-launch { padding: 14px; }
+      .portrait-launch-icon { width: 58px; height: 58px; margin-bottom: 10px; }
+      .portrait-launch-card > p:last-of-type { font-size: 0.73rem; }
+      .portrait-launch-actions { grid-template-columns: 1fr; margin-top: 13px; }
+      .portrait-launch-action { min-height: 44px; }
     }
 
     @keyframes reveal {
@@ -2082,11 +2283,26 @@
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </button>
       </header>
-      <div class="modal-frame-wrap">
-        <iframe id="videoFrame" src="about:blank" title="Workshop video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>
+      <div class="modal-frame-wrap" id="modalFrameWrap">
+        <iframe id="videoFrame" src="about:blank" title="Workshop video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" scrolling="no"></iframe>
+        <section class="portrait-launch" id="portraitLaunch" aria-label="Portrait playback options">
+          <div class="portrait-launch-card">
+            <span class="portrait-launch-icon" aria-hidden="true">
+              <svg width="27" height="27" viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7L8 5Z" fill="currentColor"/></svg>
+            </span>
+            <p class="portrait-launch-kicker">Portrait playback</p>
+            <h3>Choose the clearest phone view</h3>
+            <p>Open the recording in Drive for the roomiest controls, or keep watching here in a compact widescreen player.</p>
+            <div class="portrait-launch-actions">
+              <a class="portrait-launch-action portrait-launch-primary" id="portraitFocusLink" href="#" target="_blank" rel="noopener noreferrer">Open in Drive <span aria-hidden="true">↗</span></a>
+              <button class="portrait-launch-action portrait-launch-secondary" id="portraitInlineButton" type="button">Play here</button>
+            </div>
+          </div>
+        </section>
       </div>
       <footer class="modal-footer">
         <span>Playback depends on the viewer having permission to access the Google Drive file.</span>
+        <button class="portrait-inline-reset" id="portraitInlineReset" type="button">Use focused player instead</button>
         <a id="modalDriveLink" href="#" target="_blank" rel="noopener noreferrer">Continue in Google Drive <span aria-hidden="true">↗</span></a>
       </footer>
     </section>
@@ -2149,14 +2365,51 @@
     const modalDescription = document.getElementById('modalDescription');
     const modalDriveLink = document.getElementById('modalDriveLink');
     const videoFrame = document.getElementById('videoFrame');
+    const portraitFocusLink = document.getElementById('portraitFocusLink');
+    const portraitInlineButton = document.getElementById('portraitInlineButton');
+    const portraitInlineReset = document.getElementById('portraitInlineReset');
     const modalHeader = modal.querySelector('.modal-header');
     const modalFooter = modal.querySelector('.modal-footer');
 
     let selectedDay = 'all';
     let activeObserver = null;
     let lastFocusedElement = null;
+    let activeVideoItem = null;
+    let inlinePlaybackActive = false;
     let modalLayoutFrame = 0;
     let modalLayoutTimer = 0;
+
+    function frameIsEmpty() {
+      const source = videoFrame.getAttribute('src');
+      return !source || source === 'about:blank';
+    }
+
+    function ensureInlineVideoLoaded() {
+      if (!activeVideoItem) return;
+      const sessionId = activeVideoItem.session.id;
+      if (videoFrame.dataset.videoId === sessionId && !frameIsEmpty()) return;
+      videoFrame.dataset.videoId = sessionId;
+      videoFrame.src = previewUrl(sessionId);
+    }
+
+    function startInlinePlayback({ focus = false } = {}) {
+      if (!activeVideoItem) return;
+      inlinePlaybackActive = true;
+      modal.classList.add('is-inline-player');
+      /* Size the virtual widescreen surface before Drive initializes. */
+      syncVideoModalLayout();
+      requestVideoModalLayout();
+      if (focus) window.setTimeout(() => videoFrame.focus(), 60);
+    }
+
+    function returnToFocusedPlayback() {
+      inlinePlaybackActive = false;
+      modal.classList.remove('is-inline-player');
+      videoFrame.src = 'about:blank';
+      delete videoFrame.dataset.videoId;
+      requestVideoModalLayout();
+      portraitFocusLink.focus();
+    }
 
     function syncVideoModalLayout() {
       if (modal.hidden) return;
@@ -2177,20 +2430,64 @@
       modal.classList.toggle('is-portrait-player', portraitPlayer);
       modal.classList.toggle('is-compact-player', compactPlayer);
       modal.classList.toggle('is-short-player', shortPlayer);
+      modal.classList.toggle('is-inline-player', portraitPlayer && inlinePlaybackActive);
 
+      modal.style.removeProperty('--portrait-stage-height');
+      modal.style.removeProperty('--drive-surface-width');
+      modal.style.removeProperty('--drive-surface-height');
+      modal.style.removeProperty('--drive-surface-scale');
+      modal.style.removeProperty('--drive-surface-offset-x');
       modal.style.removeProperty('--compact-player-width');
       modal.style.removeProperty('--compact-player-height');
-
-      /* Portrait mode intentionally does not calculate a 16:9 height.
-         Its dialog is full-height and the iframe stretches through the
-         flexible middle row. Only short landscape screens need fitting. */
-      if (!compactPlayer) return;
 
       const outerInset = 16;
       const availableWidth = Math.max(240, viewportWidth - outerInset);
       const headerHeight = Math.ceil(modalHeader.getBoundingClientRect().height);
       const footerHeight = Math.ceil(modalFooter.getBoundingClientRect().height);
-      const availableVideoHeight = Math.max(128, viewportHeight - headerHeight - footerHeight - outerInset - 2);
+      const availableVideoHeight = Math.max(170, viewportHeight - headerHeight - footerHeight - outerInset - 2);
+
+      if (portraitPlayer) {
+        if (inlinePlaybackActive) {
+          /* Keep the visible stage at 16:9, but give Drive a wider internal
+             viewport and scale the complete player down. This reduces the
+             large portrait touch overlay without trying to style cross-origin
+             controls that the page cannot access. */
+          const measuredWidth = Math.floor(modalFrameWrap.getBoundingClientRect().width);
+          const playerWidth = Math.max(240, Math.min(availableWidth, measuredWidth || availableWidth));
+          const virtualWidth = playerWidth <= 460 ? 768 : 960;
+          const virtualHeight = Math.round(virtualWidth * 9 / 16);
+          const surfaceScale = Math.min(playerWidth / virtualWidth, availableVideoHeight / virtualHeight);
+          const renderedWidth = virtualWidth * surfaceScale;
+          const renderedHeight = virtualHeight * surfaceScale;
+          const horizontalOffset = Math.max(0, (playerWidth - renderedWidth) / 2);
+
+          modal.style.setProperty('--portrait-stage-height', `${Math.max(150, Math.floor(renderedHeight))}px`);
+          modal.style.setProperty('--drive-surface-width', `${virtualWidth}px`);
+          modal.style.setProperty('--drive-surface-height', `${virtualHeight}px`);
+          modal.style.setProperty('--drive-surface-scale', surfaceScale.toFixed(5));
+          modal.style.setProperty('--drive-surface-offset-x', `${Math.floor(horizontalOffset)}px`);
+          ensureInlineVideoLoaded();
+        } else {
+          /* The launch panel is tall enough to be comfortable, but it is not
+             a media iframe, so Drive's controls are not rendered at all. */
+          const launchHeight = Math.max(250, Math.min(360, availableVideoHeight, availableWidth * 0.82));
+          modal.style.setProperty('--portrait-stage-height', `${Math.floor(launchHeight)}px`);
+          if (!frameIsEmpty()) {
+            videoFrame.src = 'about:blank';
+            delete videoFrame.dataset.videoId;
+          }
+        }
+        return;
+      }
+
+      /* Moving to landscape or desktop restores the regular inline player. */
+      if (activeVideoItem) {
+        inlinePlaybackActive = true;
+        ensureInlineVideoLoaded();
+      }
+
+      if (!compactPlayer) return;
+
       const fittedWidth = Math.min(availableWidth, availableVideoHeight * (16 / 9));
       const fittedHeight = fittedWidth * (9 / 16);
 
@@ -2370,11 +2667,17 @@
     function openVideo(item) {
       const { session, day, dayIndex } = item;
       lastFocusedElement = document.activeElement;
+      activeVideoItem = item;
+      inlinePlaybackActive = false;
+      modal.classList.remove('is-inline-player');
       modalTitle.textContent = session.label;
       modalDescription.textContent = `${day.label} · ${day.date} · Session ${String(dayIndex + 1).padStart(2, '0')}${session.institution ? ` · ${session.institution}` : ''}`;
       modalDriveLink.href = viewUrl(session.id);
+      portraitFocusLink.href = viewUrl(session.id);
+      portraitFocusLink.setAttribute('aria-label', `Open ${session.label} in Google Drive`);
       videoFrame.title = session.label;
-      videoFrame.src = previewUrl(session.id);
+      videoFrame.src = 'about:blank';
+      delete videoFrame.dataset.videoId;
       modal.hidden = false;
       document.body.classList.add('modal-open');
       syncVideoModalLayout();
@@ -2395,7 +2698,15 @@
       window.setTimeout(() => {
         modal.hidden = true;
         videoFrame.src = 'about:blank';
-        modal.classList.remove('is-portrait-player', 'is-compact-player', 'is-short-player');
+        delete videoFrame.dataset.videoId;
+        activeVideoItem = null;
+        inlinePlaybackActive = false;
+        modal.classList.remove('is-portrait-player', 'is-inline-player', 'is-compact-player', 'is-short-player');
+        modal.style.removeProperty('--portrait-stage-height');
+        modal.style.removeProperty('--drive-surface-width');
+        modal.style.removeProperty('--drive-surface-height');
+        modal.style.removeProperty('--drive-surface-scale');
+        modal.style.removeProperty('--drive-surface-offset-x');
         modal.style.removeProperty('--compact-player-width');
         modal.style.removeProperty('--compact-player-height');
         if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') lastFocusedElement.focus();
@@ -2437,11 +2748,23 @@
 
     modalClose.addEventListener('click', closeVideo);
     modal.querySelectorAll('[data-close-modal]').forEach((element) => element.addEventListener('click', closeVideo));
+    portraitInlineButton.addEventListener('click', () => startInlinePlayback({ focus: true }));
+    portraitInlineReset.addEventListener('click', returnToFocusedPlayback);
+    portraitFocusLink.addEventListener('click', () => {
+      /* The link itself performs the navigation. Closing the modal shortly
+         afterward leaves a clean page when the viewer returns to this tab. */
+      window.setTimeout(closeVideo, 180);
+    });
 
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && !modal.hidden) closeVideo();
       if (event.key === 'Tab' && !modal.hidden) {
-        const focusable = [...modal.querySelectorAll('button, a[href], iframe')].filter((element) => !element.hasAttribute('disabled'));
+        const focusable = [...modal.querySelectorAll('button, a[href], iframe')].filter((element) => {
+          if (element.hasAttribute('disabled')) return false;
+          if (element.closest('[hidden]')) return false;
+          const style = window.getComputedStyle(element);
+          return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+        });
         if (!focusable.length) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
