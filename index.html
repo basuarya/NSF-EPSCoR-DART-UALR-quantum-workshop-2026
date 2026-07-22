@@ -787,8 +787,7 @@
       display: grid;
       place-items: center;
       width: var(--modal-viewport-width, 100vw);
-      min-height: 100vh;
-      min-height: 100dvh;
+      height: 100vh;
       height: var(--modal-viewport-height, 100dvh);
       padding: 18px;
       opacity: 0;
@@ -814,6 +813,7 @@
       display: grid;
       grid-template-rows: auto auto auto;
       width: min(1080px, 100%);
+      min-width: 0;
       max-height: calc(100vh - 36px);
       max-height: calc(var(--modal-viewport-height, 100dvh) - 36px);
       overflow: auto;
@@ -908,9 +908,10 @@
 
     body.modal-open { overflow: hidden; }
 
-    /* The player is fitted against the visible browser viewport. This avoids
-       hidden controls and clipped video when mobile browser bars expand or
-       collapse, and gives portrait phones a dedicated, full-width layout. */
+    /* Portrait phones use the full visible height. The Google Drive iframe
+       fills the flexible middle row instead of being forced into a short
+       width-derived 16:9 box. Google Drive can then letterbox its own video
+       while keeping its controls and complete canvas visible. */
     .video-modal.is-portrait-player,
     .video-modal.is-compact-player {
       padding:
@@ -920,9 +921,17 @@
         max(8px, env(safe-area-inset-left));
     }
 
+    .video-modal.is-portrait-player {
+      place-items: stretch center;
+    }
+
     .video-modal.is-portrait-player .modal-dialog {
-      width: min(var(--portrait-player-width, 620px), calc(var(--modal-viewport-width, 100vw) - 16px));
-      max-height: calc(var(--modal-viewport-height, 100dvh) - 16px);
+      align-self: stretch;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      width: min(620px, 100%);
+      height: 100%;
+      min-height: 0;
+      max-height: none;
       overflow: hidden;
       border-radius: 20px;
     }
@@ -958,8 +967,10 @@
     }
 
     .video-modal.is-portrait-player .modal-frame-wrap {
+      align-self: stretch;
       width: 100%;
-      height: var(--portrait-player-height, auto);
+      height: 100%;
+      min-height: 0;
       aspect-ratio: auto;
     }
 
@@ -1031,22 +1042,18 @@
     }
 
     .video-modal.is-compact-player .modal-footer > span,
-    .video-modal.is-short-player .modal-footer > span {
+    .video-modal.is-portrait-player.is-short-player .modal-footer > span {
       display: none;
     }
 
-    .video-modal.is-short-player .modal-header {
-      padding-block: 8px;
-    }
+    .video-modal.is-short-player .modal-header { padding-block: 8px; }
 
     .video-modal.is-short-player .modal-footer {
       gap: 0;
       padding-block: 8px;
     }
 
-    .video-modal.is-short-player .modal-footer a {
-      min-height: 36px;
-    }
+    .video-modal.is-short-player .modal-footer a { min-height: 36px; }
 
     @media (max-width: 430px) and (orientation: portrait) {
       .video-modal.is-portrait-player .modal-header { padding: 10px 11px; }
@@ -2076,7 +2083,7 @@
         </button>
       </header>
       <div class="modal-frame-wrap">
-        <iframe id="videoFrame" src="about:blank" title="Workshop video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+        <iframe id="videoFrame" src="about:blank" title="Workshop video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>
       </div>
       <footer class="modal-footer">
         <span>Playback depends on the viewer having permission to access the Google Drive file.</span>
@@ -2142,7 +2149,6 @@
     const modalDescription = document.getElementById('modalDescription');
     const modalDriveLink = document.getElementById('modalDriveLink');
     const videoFrame = document.getElementById('videoFrame');
-    const modalDialog = modal.querySelector('.modal-dialog');
     const modalHeader = modal.querySelector('.modal-header');
     const modalFooter = modal.querySelector('.modal-footer');
 
@@ -2160,7 +2166,7 @@
       const viewportHeight = Math.max(280, Math.round(viewport?.height || window.innerHeight));
       const viewportTop = Math.round(viewport?.offsetTop || 0);
       const viewportLeft = Math.round(viewport?.offsetLeft || 0);
-      const portraitPlayer = viewportWidth <= 720 && viewportHeight >= viewportWidth;
+      const portraitPlayer = viewportWidth <= 820 && viewportHeight > viewportWidth;
       const compactPlayer = !portraitPlayer && ((viewportWidth > viewportHeight && viewportHeight <= 680) || viewportHeight <= 430);
       const shortPlayer = viewportHeight <= 560;
 
@@ -2172,12 +2178,13 @@
       modal.classList.toggle('is-compact-player', compactPlayer);
       modal.classList.toggle('is-short-player', shortPlayer);
 
-      modal.style.removeProperty('--portrait-player-width');
-      modal.style.removeProperty('--portrait-player-height');
       modal.style.removeProperty('--compact-player-width');
       modal.style.removeProperty('--compact-player-height');
 
-      if (!portraitPlayer && !compactPlayer) return;
+      /* Portrait mode intentionally does not calculate a 16:9 height.
+         Its dialog is full-height and the iframe stretches through the
+         flexible middle row. Only short landscape screens need fitting. */
+      if (!compactPlayer) return;
 
       const outerInset = 16;
       const availableWidth = Math.max(240, viewportWidth - outerInset);
@@ -2186,10 +2193,9 @@
       const availableVideoHeight = Math.max(128, viewportHeight - headerHeight - footerHeight - outerInset - 2);
       const fittedWidth = Math.min(availableWidth, availableVideoHeight * (16 / 9));
       const fittedHeight = fittedWidth * (9 / 16);
-      const prefix = portraitPlayer ? 'portrait' : 'compact';
 
-      modal.style.setProperty(`--${prefix}-player-width`, `${Math.floor(fittedWidth)}px`);
-      modal.style.setProperty(`--${prefix}-player-height`, `${Math.floor(fittedHeight)}px`);
+      modal.style.setProperty('--compact-player-width', `${Math.floor(fittedWidth)}px`);
+      modal.style.setProperty('--compact-player-height', `${Math.floor(fittedHeight)}px`);
     }
 
     function requestVideoModalLayout() {
@@ -2384,10 +2390,14 @@
       if (modal.hidden) return;
       modal.classList.remove('is-open');
       document.body.classList.remove('modal-open');
+      window.cancelAnimationFrame(modalLayoutFrame);
+      window.clearTimeout(modalLayoutTimer);
       window.setTimeout(() => {
         modal.hidden = true;
         videoFrame.src = 'about:blank';
         modal.classList.remove('is-portrait-player', 'is-compact-player', 'is-short-player');
+        modal.style.removeProperty('--compact-player-width');
+        modal.style.removeProperty('--compact-player-height');
         if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') lastFocusedElement.focus();
       }, 180);
     }
