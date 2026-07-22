@@ -781,16 +781,19 @@
 
     .video-modal {
       position: fixed;
-      inset: 0;
+      top: var(--modal-viewport-top, 0px);
+      left: var(--modal-viewport-left, 0px);
       z-index: 100;
       display: grid;
       place-items: center;
-      width: 100%;
+      width: var(--modal-viewport-width, 100vw);
       min-height: 100vh;
       min-height: 100dvh;
       height: var(--modal-viewport-height, 100dvh);
       padding: 18px;
       opacity: 0;
+      overflow: hidden;
+      overscroll-behavior: contain;
       transition: opacity 180ms ease;
     }
 
@@ -808,11 +811,14 @@
     .modal-dialog {
       position: relative;
       z-index: 1;
+      display: grid;
+      grid-template-rows: auto auto auto;
       width: min(1080px, 100%);
       max-height: calc(100vh - 36px);
       max-height: calc(var(--modal-viewport-height, 100dvh) - 36px);
       overflow: auto;
       overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
       border: 1px solid rgba(116, 206, 255, 0.34);
       border-radius: 25px;
       background: #061226;
@@ -863,18 +869,24 @@
     .modal-frame-wrap {
       position: relative;
       width: 100%;
+      min-width: 0;
+      min-height: 0;
       aspect-ratio: 16 / 9;
       overflow: hidden;
       background: #000000;
+      contain: layout paint;
     }
 
     .modal-frame-wrap iframe {
+      position: absolute;
+      inset: 0;
       display: block;
       width: 100%;
       height: 100%;
       min-width: 0;
       min-height: 0;
       border: 0;
+      background: #000000;
     }
 
     .modal-footer {
@@ -896,10 +908,10 @@
 
     body.modal-open { overflow: hidden; }
 
-    /* Short mobile viewports need the complete 16:9 frame to fit alongside
-       the modal controls. The compact layout sizes the dialog around the
-       visible viewport instead of allowing the video to spill into a hidden
-       scroll region. */
+    /* The player is fitted against the visible browser viewport. This avoids
+       hidden controls and clipped video when mobile browser bars expand or
+       collapse, and gives portrait phones a dedicated, full-width layout. */
+    .video-modal.is-portrait-player,
     .video-modal.is-compact-player {
       padding:
         max(8px, env(safe-area-inset-top))
@@ -908,8 +920,73 @@
         max(8px, env(safe-area-inset-left));
     }
 
+    .video-modal.is-portrait-player .modal-dialog {
+      width: min(var(--portrait-player-width, 620px), calc(var(--modal-viewport-width, 100vw) - 16px));
+      max-height: calc(var(--modal-viewport-height, 100dvh) - 16px);
+      overflow: hidden;
+      border-radius: 20px;
+    }
+
+    .video-modal.is-portrait-player .modal-header {
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 13px;
+    }
+
+    .video-modal.is-portrait-player .modal-copy h2 {
+      display: -webkit-box;
+      overflow: hidden;
+      font-size: clamp(0.98rem, 4.3vw, 1.12rem);
+      line-height: 1.22;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    .video-modal.is-portrait-player .modal-copy p {
+      margin-top: 4px;
+      overflow: hidden;
+      font-size: 0.72rem;
+      line-height: 1.3;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .video-modal.is-portrait-player .modal-close {
+      width: 38px;
+      height: 38px;
+      flex-basis: 38px;
+    }
+
+    .video-modal.is-portrait-player .modal-frame-wrap {
+      width: 100%;
+      height: var(--portrait-player-height, auto);
+      aspect-ratio: auto;
+    }
+
+    .video-modal.is-portrait-player .modal-footer {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 9px;
+      padding: 11px 13px 13px;
+      font-size: 0.73rem;
+      line-height: 1.45;
+    }
+
+    .video-modal.is-portrait-player .modal-footer a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 12px;
+      border: 1px solid rgba(123, 203, 255, 0.24);
+      border-radius: 11px;
+      background: rgba(72, 191, 255, 0.08);
+      white-space: normal;
+      text-align: center;
+    }
+
     .video-modal.is-compact-player .modal-dialog {
-      width: min(var(--compact-player-width, 560px), calc(100vw - 16px));
+      width: min(var(--compact-player-width, 560px), calc(var(--modal-viewport-width, 100vw) - 16px));
       max-height: calc(var(--modal-viewport-height, 100dvh) - 16px);
       overflow: hidden;
       border-radius: 18px;
@@ -930,7 +1007,8 @@
       white-space: nowrap;
     }
 
-    .video-modal.is-compact-player .modal-copy p {
+    .video-modal.is-compact-player .modal-copy p,
+    .video-modal.is-short-player .modal-copy p {
       display: none;
     }
 
@@ -942,7 +1020,8 @@
 
     .video-modal.is-compact-player .modal-frame-wrap {
       width: 100%;
-      aspect-ratio: 16 / 9;
+      height: var(--compact-player-height, auto);
+      aspect-ratio: auto;
     }
 
     .video-modal.is-compact-player .modal-footer {
@@ -951,8 +1030,33 @@
       font-size: 0.72rem;
     }
 
-    .video-modal.is-compact-player .modal-footer > span {
+    .video-modal.is-compact-player .modal-footer > span,
+    .video-modal.is-short-player .modal-footer > span {
       display: none;
+    }
+
+    .video-modal.is-short-player .modal-header {
+      padding-block: 8px;
+    }
+
+    .video-modal.is-short-player .modal-footer {
+      gap: 0;
+      padding-block: 8px;
+    }
+
+    .video-modal.is-short-player .modal-footer a {
+      min-height: 36px;
+    }
+
+    @media (max-width: 430px) and (orientation: portrait) {
+      .video-modal.is-portrait-player .modal-header { padding: 10px 11px; }
+      .video-modal.is-portrait-player .modal-copy h2 { font-size: 0.96rem; }
+      .video-modal.is-portrait-player .modal-close {
+        width: 36px;
+        height: 36px;
+        flex-basis: 36px;
+      }
+      .video-modal.is-portrait-player .modal-footer { padding: 9px 11px 11px; }
     }
 
     @keyframes reveal {
@@ -1039,20 +1143,7 @@
       .play-core { width: 60px; height: 60px; }
       .session-content { padding: 17px; }
       .session-meta { align-items: flex-start; }
-      .video-modal {
-        padding:
-          max(10px, env(safe-area-inset-top))
-          max(10px, env(safe-area-inset-right))
-          max(10px, env(safe-area-inset-bottom))
-          max(10px, env(safe-area-inset-left));
-      }
-      .modal-dialog {
-        width: 100%;
-        max-height: calc(var(--modal-viewport-height, 100dvh) - 20px);
-        border-radius: 20px;
-      }
-      .modal-header { padding: 14px; }
-      .modal-footer { align-items: flex-start; flex-direction: column; padding: 14px; }
+      .modal-footer { align-items: flex-start; flex-direction: column; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -1985,7 +2076,7 @@
         </button>
       </header>
       <div class="modal-frame-wrap">
-        <iframe id="videoFrame" src="about:blank" title="Workshop video" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+        <iframe id="videoFrame" src="about:blank" title="Workshop video" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
       </div>
       <footer class="modal-footer">
         <span>Playback depends on the viewer having permission to access the Google Drive file.</span>
@@ -2025,7 +2116,7 @@
           { label: 'Dr. Mariofanna Milanova & Hadi Rashid — Research Talk', institution: 'UALR', type: 'Research Talk', id: '1e7Zya9rBcn4YAyBu-5zbfGlKp5BYwQVj', sourceTitle: 'Day 2 - Dr. Mariofanna Milanova and Hadi Rashid - Research Talk (UALR).mp4' },
           { label: 'Dr. Vicente Leyton-Ortega', institution: 'ORNL', type: 'Featured Talk', id: '19jxNhjviXaRY2PlFCt9SrolDAFcd1giC', sourceTitle: 'Day 2- Vicente (ORNL).mp4' },
           { label: 'Jack Chan & Wei Ling Neo — Quantum Cryptography', institution: 'Fortinet', type: 'Cryptography', id: '10OMRQnjxpw90GaHjeRSaLviYWiMatTE3', sourceTitle: 'Day 2 - Jack Chan and Wei Ling Neo - Quantum Cryptography(Fortinet).mp4' },
-          { label: 'Dr. Daniel Sierra-Sosa — Quantum Machine Learning', institution: '', type: 'Machine Learning', id: '1KWaRHNceIZdquBY87TYcRKVeYbnyVRpd', sourceTitle: 'Day 2 - Dr. Daniel Sierra-Sosa Quantum ML.mp4' },
+          { label: 'Dr. Daniel — Quantum Machine Learning', institution: '', type: 'Machine Learning', id: '1KWaRHNceIZdquBY87TYcRKVeYbnyVRpd', sourceTitle: 'Day 2 - Dr. Daniel Quantum ML.mp4' },
           { label: 'Catalina Albornoz — Discussion on PennyLane', institution: 'Xanadu', type: 'Discussion', id: '1jobK-lmKOrZyplfR3Vp3taZiJwxyTQOY', sourceTitle: 'Day 2 - Catalina Albornoz - Discussion on PennyLane (Xanadu).mp4' },
           { label: 'Dr. Kaidong Peng — Quantum Nano Talk', institution: 'MIT', type: 'Nanoscience', id: '16kLI9qzcHVgjZfnBWLwvjVq5wskcxACw', sourceTitle: 'Day 2 - Dr. Kaiding Peng-Quantum nano Talk (MIT).mp4' },
           { label: 'Dr. Steven Girvin', institution: 'Yale', type: 'Featured Talk', id: '1iMnWHZML3jOljJXQTrKGztCzVJDLdQ-b', sourceTitle: 'Day 2 - Dr. Steven Girvin (Yale).mp4' },
@@ -2051,30 +2142,61 @@
     const modalDescription = document.getElementById('modalDescription');
     const modalDriveLink = document.getElementById('modalDriveLink');
     const videoFrame = document.getElementById('videoFrame');
+    const modalDialog = modal.querySelector('.modal-dialog');
+    const modalHeader = modal.querySelector('.modal-header');
+    const modalFooter = modal.querySelector('.modal-footer');
 
     let selectedDay = 'all';
     let activeObserver = null;
     let lastFocusedElement = null;
+    let modalLayoutFrame = 0;
+    let modalLayoutTimer = 0;
 
     function syncVideoModalLayout() {
+      if (modal.hidden) return;
+
       const viewport = window.visualViewport;
-      const viewportWidth = Math.round(viewport?.width || window.innerWidth);
-      const viewportHeight = Math.round(viewport?.height || window.innerHeight);
-      const compactPlayer = (viewportWidth > viewportHeight && viewportHeight <= 600) || viewportHeight <= 430;
+      const viewportWidth = Math.max(280, Math.round(viewport?.width || window.innerWidth));
+      const viewportHeight = Math.max(280, Math.round(viewport?.height || window.innerHeight));
+      const viewportTop = Math.round(viewport?.offsetTop || 0);
+      const viewportLeft = Math.round(viewport?.offsetLeft || 0);
+      const portraitPlayer = viewportWidth <= 720 && viewportHeight >= viewportWidth;
+      const compactPlayer = !portraitPlayer && ((viewportWidth > viewportHeight && viewportHeight <= 680) || viewportHeight <= 430);
+      const shortPlayer = viewportHeight <= 560;
 
+      modal.style.setProperty('--modal-viewport-width', `${viewportWidth}px`);
       modal.style.setProperty('--modal-viewport-height', `${viewportHeight}px`);
+      modal.style.setProperty('--modal-viewport-top', `${viewportTop}px`);
+      modal.style.setProperty('--modal-viewport-left', `${viewportLeft}px`);
+      modal.classList.toggle('is-portrait-player', portraitPlayer);
       modal.classList.toggle('is-compact-player', compactPlayer);
+      modal.classList.toggle('is-short-player', shortPlayer);
 
-      if (compactPlayer) {
-        const outerInset = 16;
-        const modalChrome = 90;
-        const availableVideoHeight = Math.max(120, viewportHeight - modalChrome - outerInset);
-        const availableVideoWidth = Math.max(220, viewportWidth - outerInset);
-        const fittedPlayerWidth = Math.min(availableVideoWidth, availableVideoHeight * (16 / 9));
-        modal.style.setProperty('--compact-player-width', `${Math.floor(fittedPlayerWidth)}px`);
-      } else {
-        modal.style.removeProperty('--compact-player-width');
-      }
+      modal.style.removeProperty('--portrait-player-width');
+      modal.style.removeProperty('--portrait-player-height');
+      modal.style.removeProperty('--compact-player-width');
+      modal.style.removeProperty('--compact-player-height');
+
+      if (!portraitPlayer && !compactPlayer) return;
+
+      const outerInset = 16;
+      const availableWidth = Math.max(240, viewportWidth - outerInset);
+      const headerHeight = Math.ceil(modalHeader.getBoundingClientRect().height);
+      const footerHeight = Math.ceil(modalFooter.getBoundingClientRect().height);
+      const availableVideoHeight = Math.max(128, viewportHeight - headerHeight - footerHeight - outerInset - 2);
+      const fittedWidth = Math.min(availableWidth, availableVideoHeight * (16 / 9));
+      const fittedHeight = fittedWidth * (9 / 16);
+      const prefix = portraitPlayer ? 'portrait' : 'compact';
+
+      modal.style.setProperty(`--${prefix}-player-width`, `${Math.floor(fittedWidth)}px`);
+      modal.style.setProperty(`--${prefix}-player-height`, `${Math.floor(fittedHeight)}px`);
+    }
+
+    function requestVideoModalLayout() {
+      window.cancelAnimationFrame(modalLayoutFrame);
+      window.clearTimeout(modalLayoutTimer);
+      modalLayoutFrame = window.requestAnimationFrame(syncVideoModalLayout);
+      modalLayoutTimer = window.setTimeout(syncVideoModalLayout, 140);
     }
 
     const escapeHTML = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({
@@ -2247,13 +2369,15 @@
       modalDriveLink.href = viewUrl(session.id);
       videoFrame.title = session.label;
       videoFrame.src = previewUrl(session.id);
-      syncVideoModalLayout();
       modal.hidden = false;
       document.body.classList.add('modal-open');
+      syncVideoModalLayout();
       requestAnimationFrame(() => {
+        syncVideoModalLayout();
         modal.classList.add('is-open');
         modalClose.focus();
       });
+      requestVideoModalLayout();
     }
 
     function closeVideo() {
@@ -2263,6 +2387,7 @@
       window.setTimeout(() => {
         modal.hidden = true;
         videoFrame.src = 'about:blank';
+        modal.classList.remove('is-portrait-player', 'is-compact-player', 'is-short-player');
         if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') lastFocusedElement.focus();
       }, 180);
     }
@@ -2323,15 +2448,18 @@
     window.addEventListener('scroll', updateTimelineProgress, { passive: true });
     window.addEventListener('resize', () => {
       updateTimelineProgress();
-      if (!modal.hidden) syncVideoModalLayout();
+      if (!modal.hidden) requestVideoModalLayout();
+    });
+    window.addEventListener('orientationchange', () => {
+      if (!modal.hidden) requestVideoModalLayout();
     });
 
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', () => {
-        if (!modal.hidden) syncVideoModalLayout();
+        if (!modal.hidden) requestVideoModalLayout();
       });
       window.visualViewport.addEventListener('scroll', () => {
-        if (!modal.hidden) syncVideoModalLayout();
+        if (!modal.hidden) requestVideoModalLayout();
       }, { passive: true });
     }
 
